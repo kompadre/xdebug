@@ -96,6 +96,22 @@ void xdebug_monitor_handler(function_stack_entry *fse)
 	xdfree(func_name);
 }
 
+static int find_filename_for_current_execute_point(zend_execute_data *edata)
+{
+    zend_execute_data *ptr = edata;
+
+    while (ptr && (!ptr->func || !ZEND_USER_CODE(ptr->func->type))) {
+        ptr = ptr->prev_execute_data;
+    }
+
+    if (ptr && ptr->opline) {
+        return ptr->opline->lineno;
+    }
+
+    return 0;
+}
+
+
 PHP_FUNCTION(xdebug_start_function_monitor)
 {
 	HashTable *functions_to_monitor;
