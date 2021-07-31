@@ -41,6 +41,10 @@ typedef struct _xdebug_develop_globals_t {
 
 	/* overloaded var_dump */
 	zif_handler   orig_var_dump_func;
+    /* code to execute when a monitored function is called */
+	char *mon_exec;
+	char *mon_end;
+	char *mon_start_filename;
 } xdebug_develop_globals_t;
 
 typedef struct _xdebug_develop_settings_t {

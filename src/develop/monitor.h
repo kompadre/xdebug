@@ -22,6 +22,7 @@ typedef struct xdebug_monitored_function_entry
 	char        *func_name;
 	zend_string *filename;
 	int          lineno;
+	char        *code;
 } xdebug_monitored_function_entry;
 
 void xdebug_monitored_function_dtor(void *dummy, void *elem);

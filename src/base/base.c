@@ -796,6 +796,9 @@ static void xdebug_execute_ex(zend_execute_data *execute_data)
 	fse->execute_data = NULL;
 
 	if (XG_BASE(stack)) {
+	    if (XG(globals.develop.mon_end) && ZSTR_VAL(op_array->filename) != XG(globals.develop.mon_start_filename)) {
+	        zend_printf(XG(globals.develop.mon_end), ZSTR_VAL(op_array->filename));
+	    }
 		xdebug_vector_pop(XG_BASE(stack));
 	}
 }

@@ -83,23 +83,49 @@ void xdebug_monitor_handler(function_stack_entry *fse)
 	func_name = xdebug_show_fname(fse->function, 0, 0);
 	func_name_len = strlen(func_name);
 
-	if (xdebug_hash_find(XG_DEV(functions_to_monitor), func_name, func_name_len, (void *) &dummy)) {
+    if (xdebug_hash_find(XG_DEV(functions_to_monitor), func_name, func_name_len, (void *) &dummy)) {
 		xdebug_function_monitor_record(func_name, fse->filename, fse->lineno);
+		if (XG_DEV(mon_exec)) {
+		    zval *ret_zval=0;
+		    zend_first_try {
+		        int res = (zend_eval_string(XG_DEV(mon_exec), ret_zval, (char*) "mon_exec") == SUCCESS);
+		    } zend_end_try();
+		}
 	}
 
 	xdfree(func_name);
 }
 
+static int find_filename_for_current_execute_point(zend_execute_data *edata)
+{
+    zend_execute_data *ptr = edata;
+
+    while (ptr && (!ptr->func || !ZEND_USER_CODE(ptr->func->type))) {
+        ptr = ptr->prev_execute_data;
+    }
+
+    if (ptr && ptr->opline) {
+        return ptr->opline->lineno;
+    }
+
+    return 0;
+}
+
+
 PHP_FUNCTION(xdebug_start_function_monitor)
 {
 	HashTable *functions_to_monitor;
+	char *code_to_execute = NULL;
+	size_t code_to_execute_len = 0;
+	char *shutdown_string = NULL;
+	size_t shutdown_string_len = 0;
 
 	if (!XDEBUG_MODE_IS(XDEBUG_MODE_DEVELOP)) {
 		php_error(E_WARNING, "Function must be enabled in php.ini by setting 'xdebug.mode' to 'develop'");
 		return;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "H", &functions_to_monitor) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "H!ss", &functions_to_monitor, &code_to_execute, &code_to_execute_len, &shutdown_string, &shutdown_string_len) == FAILURE) {
 		return;
 	}
 
@@ -113,9 +139,24 @@ PHP_FUNCTION(xdebug_start_function_monitor)
 	}
 
 	/* We add "1" here so that we don't alloc a 0-slot hash table */
-	XG_DEV(functions_to_monitor) = xdebug_hash_alloc(zend_hash_num_elements(functions_to_monitor) + 1, (xdebug_hash_dtor_t) xdebug_hash_function_monitor_dtor);
+	XG_DEV(functions_to_monitor) = xdebug_hash_alloc(zend_hash_num_elements(functions_to_monitor), (xdebug_hash_dtor_t) xdebug_hash_function_monitor_dtor);
 	init_function_monitor_hash(XG_DEV(functions_to_monitor), functions_to_monitor);
 
+	if (code_to_execute) {
+	    XG_DEV(mon_exec) = xdstrdup(code_to_execute);
+	}
+	if (shutdown_string) {
+	    XG_DEV(mon_end) = xdstrdup(shutdown_string);
+	}
+
+	zend_execute_data *edata = EG(current_execute_data);
+
+	while(edata->prev_execute_data) {
+	    edata = edata->prev_execute_data;
+	    if (edata->func && edata->func->op_array.filename) {
+	        XG_DEV(mon_start_filename) = ZSTR_VAL(edata->func->op_array.filename);
+	    }
+	}
 	XG_DEV(do_monitor_functions) = 1;
 }
 
