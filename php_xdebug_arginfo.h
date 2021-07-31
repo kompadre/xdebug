@@ -86,6 +86,8 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_xdebug_start_function_monitor, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, listOfFunctionsToMonitor, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, codeToExec, IS_STRING, 1)
+	ZEND_ARG_TYPE_INFO(0, shutdownString, IS_STRING, 1)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_xdebug_start_gcstats, 0, 0, 0)
